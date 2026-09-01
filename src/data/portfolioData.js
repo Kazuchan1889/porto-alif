@@ -256,7 +256,7 @@ export const projects = [
     title: "Responsive Developer Portfolio",
     category: "Web App",
     categoryKey: "web",
-    image: "/assets/alif-portrait.jpg",
+    image: "/assets/project-portfolio.png",
     client: "Personal Portfolio",
     period: "2026",
     featured: false,
