@@ -30,6 +30,10 @@ export const Testimonial = sequelize.define('Testimonial', {
   rating: {
     type: DataTypes.INTEGER,
     defaultValue: 5
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   }
 }, {
   tableName: 'testimonials',

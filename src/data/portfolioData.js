@@ -280,5 +280,6 @@ export const testimonial = {
   role: "Engineering Lead & Tech Mentor",
   company: "Enterprise Software Division",
   avatar: "/assets/testimonial-avatar.jpg",
-  rating: 5
+  rating: 5,
+  isActive: true
 };

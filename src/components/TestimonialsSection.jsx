@@ -5,6 +5,11 @@ import { usePortfolio } from '../context/PortfolioContext';
 export default function TestimonialsSection() {
   const { testimonial } = usePortfolio();
 
+  // If deactivated from CMS, do not render the testimonial section on the portfolio page
+  if (testimonial && testimonial.isActive === false) {
+    return null;
+  }
+
   const testimonials = [
     {
       id: 1,
