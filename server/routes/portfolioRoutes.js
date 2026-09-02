@@ -27,9 +27,32 @@ router.use((req, res, next) => {
   next();
 });
 
+let isSynced = false;
+const ensureDbSync = async () => {
+  if (!isSynced) {
+    try {
+      await PersonalInfo.sync();
+      await TechStack.sync();
+      await Service.sync();
+      await Experience.sync();
+      await Education.sync();
+      await Certification.sync();
+      await Volunteering.sync();
+      await Project.sync();
+      await Testimonial.sync();
+      await ContactMessage.sync();
+      isSynced = true;
+    } catch (e) {
+      console.warn('Sync table check notice:', e.message);
+    }
+  }
+};
+
 // ===================== FULL PORTFOLIO GET =====================
 router.get('/portfolio', async (req, res) => {
   try {
+    await ensureDbSync();
+
     let personalInfo = await PersonalInfo.findOne();
     if (!personalInfo) {
       await seedDatabase(false);
