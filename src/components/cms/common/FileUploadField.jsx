@@ -62,6 +62,61 @@ export default function FileUploadField({
     }
   };
 
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      // For PDFs or SVGs, read as normal Data URL
+      if (!file.type.startsWith('image/') || file.type.includes('svg')) {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('Gagal membaca file dari folder'));
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to optimized WebP (or JPEG fallback)
+          try {
+            const webpUrl = canvas.toDataURL('image/webp', 0.85);
+            resolve(webpUrl);
+          } catch {
+            const jpegUrl = canvas.toDataURL('image/jpeg', 0.85);
+            resolve(jpegUrl);
+          }
+        };
+        img.onerror = () => reject(new Error('Gagal memuat gambar untuk kompresi'));
+        img.src = event.target.result;
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca file dari folder'));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const processFile = async (file) => {
     if (!file) return;
 
@@ -80,15 +135,10 @@ export default function FileUploadField({
     setPreviewSize((file.size / 1024).toFixed(0) + ' KB');
 
     try {
-      // 1. Read file as Base64 Data URL for instant live preview & offline storage
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error('Gagal membaca file dari folder'));
-        reader.readAsDataURL(file);
-      });
+      // 1. Process and optimize file as Data URL
+      const dataUrl = await compressImage(file);
 
-      // 2. Attempt to upload to backend server if reachable
+      // 2. Try server upload if available
       let finalUrl = dataUrl;
       try {
         const response = await fetch('/api/upload', {
@@ -108,7 +158,7 @@ export default function FileUploadField({
           }
         }
       } catch (backendErr) {
-        console.warn('Backend server offline, storing base64 locally:', backendErr.message);
+        console.warn('Backend server upload fallback to dataUrl:', backendErr.message);
       }
 
       // 3. Update state

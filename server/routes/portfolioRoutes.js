@@ -466,20 +466,29 @@ router.post('/upload', async (req, res) => {
       cleanName = `${cleanName}${extension}`;
     }
 
-    const uniqueFileName = `${Date.now()}-${cleanName}`;
-    const destinationPath = path.join(uploadsDir, uniqueFileName);
+    try {
+      const uniqueFileName = `${Date.now()}-${cleanName}`;
+      const destinationPath = path.join(uploadsDir, uniqueFileName);
+      await fs.promises.writeFile(destinationPath, fileBuffer);
+      const publicUrl = `/uploads/${uniqueFileName}`;
 
-    await fs.promises.writeFile(destinationPath, fileBuffer);
-
-    const publicUrl = `/uploads/${uniqueFileName}`;
-
-    res.json({
-      success: true,
-      url: publicUrl,
-      fileName: cleanName,
-      size: fileBuffer.length,
-      message: 'File berhasil diunggah ke server'
-    });
+      return res.json({
+        success: true,
+        url: publicUrl,
+        fileName: cleanName,
+        size: fileBuffer.length,
+        message: 'File berhasil diunggah'
+      });
+    } catch (fsErr) {
+      console.warn('Filesystem write not supported in serverless/read-only mode, using data-url:', fsErr.message);
+      return res.json({
+        success: true,
+        url: fileData,
+        fileName: cleanName,
+        size: fileBuffer.length,
+        message: 'File diproses sebagai Data URL'
+      });
+    }
   } catch (err) {
     console.error('Error in /api/upload endpoint:', err);
     res.status(500).json({ error: 'Failed to upload file', details: err.message });
