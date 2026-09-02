@@ -53,6 +53,16 @@ app.get('/health', healthHandler);
 app.use('/api', portfolioRoutes);
 app.use('/', portfolioRoutes);
 
+// Global error handler for uncaught exceptions in route handlers
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error in API:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message || 'An unexpected error occurred',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // 404 handler for unmatched API routes
 app.use((req, res) => {
   res.status(404).json({ 
@@ -63,7 +73,5 @@ app.use((req, res) => {
   });
 });
 
-// Vercel Serverless Function Handler
-export default function handler(req, res) {
-  return app(req, res);
-}
+// Export Express app directly for Vercel Serverless Function & local servers
+export default app;

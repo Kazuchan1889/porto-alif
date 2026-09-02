@@ -45,17 +45,17 @@ router.get('/portfolio', async (req, res) => {
       contactMessages,
       unreadMessagesCount
     ] = await Promise.all([
-      PersonalInfo.findOne(),
-      TechStack.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
-      Service.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
-      Experience.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] }),
-      Education.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
-      Certification.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
-      Volunteering.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
-      Project.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] }),
-      Testimonial.findOne(),
-      ContactMessage.findAll({ order: [['createdAt', 'DESC']] }),
-      ContactMessage.count({ where: { read: false } })
+      PersonalInfo.findOne().catch(e => { console.error('PersonalInfo query error:', e.message); return null; }),
+      TechStack.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }).catch(e => { console.error('TechStack query error:', e.message); return []; }),
+      Service.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }).catch(e => { console.error('Service query error:', e.message); return []; }),
+      Experience.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] }).catch(e => { console.error('Experience query error:', e.message); return []; }),
+      Education.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }).catch(e => { console.error('Education query error:', e.message); return []; }),
+      Certification.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }).catch(e => { console.error('Certification query error:', e.message); return []; }),
+      Volunteering.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }).catch(e => { console.error('Volunteering query error:', e.message); return []; }),
+      Project.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] }).catch(e => { console.error('Project query error:', e.message); return []; }),
+      Testimonial.findOne().catch(e => { console.error('Testimonial query error:', e.message); return null; }),
+      ContactMessage.findAll({ order: [['createdAt', 'DESC']] }).catch(e => { console.error('ContactMessage query error:', e.message); return []; }),
+      ContactMessage.count({ where: { read: false } }).catch(e => { console.error('ContactMessage count error:', e.message); return 0; })
     ]);
 
     // If database was empty for personalInfo, seed initial defaults once
@@ -72,16 +72,16 @@ router.get('/portfolio', async (req, res) => {
     res.json({
       success: true,
       personalInfo: finalPersonalInfo,
-      techStack,
-      services,
-      experiences,
-      education,
-      certifications,
-      volunteering,
-      projects,
-      testimonial,
-      contactMessages,
-      unreadMessagesCount,
+      techStack: techStack || [],
+      services: services || [],
+      experiences: experiences || [],
+      education: education || [],
+      certifications: certifications || [],
+      volunteering: volunteering || [],
+      projects: projects || [],
+      testimonial: testimonial,
+      contactMessages: contactMessages || [],
+      unreadMessagesCount: unreadMessagesCount || 0,
       timestamp: new Date().toISOString()
     });
   } catch (err) {

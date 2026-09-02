@@ -1,4 +1,5 @@
 import { Sequelize } from 'sequelize';
+import pg from 'pg';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -6,6 +7,7 @@ const connectionString = process.env.DATABASE_URL || 'postgresql://postgres.ernw
 
 export const sequelize = new Sequelize(connectionString, {
   dialect: 'postgres',
+  dialectModule: pg,
   dialectOptions: {
     ssl: {
       require: true,
@@ -15,9 +17,9 @@ export const sequelize = new Sequelize(connectionString, {
   },
   logging: false,
   pool: {
-    max: 10,
+    max: 5,
     min: 0,
-    acquire: 60000,
+    acquire: 30000,
     idle: 10000
   }
 });
