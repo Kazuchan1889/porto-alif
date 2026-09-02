@@ -12,9 +12,10 @@ import {
   Database,
   BarChart3
 } from 'lucide-react';
-import { experiences, education, volunteering, certifications } from '../data/portfolioData';
+import { usePortfolio } from '../context/PortfolioContext';
 
 export default function ExperienceSection() {
+  const { experiences, education, volunteering, certifications } = usePortfolio();
   const [activeTab, setActiveTab] = useState('work');
 
   const tabs = [

@@ -16,9 +16,10 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { personalInfo } from '../data/portfolioData';
+import { usePortfolio } from '../context/PortfolioContext';
 
 export default function ContactCtaSection({ showToast }) {
+  const { personalInfo, sendContactMessage } = usePortfolio();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,6 +29,8 @@ export default function ContactCtaSection({ showToast }) {
   const [copiedField, setCopiedField] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSentSuccess, setIsSentSuccess] = useState(false);
+
+  const targetEmail = personalInfo?.contactReceiverEmail || personalInfo?.email || 'aliframadhani575@gmail.com';
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -50,24 +53,13 @@ export default function ContactCtaSection({ showToast }) {
     setIsSubmitting(true);
 
     try {
-      // Direct email dispatch to aliframadhani575@gmail.com via FormSubmit AJAX API
-      const response = await fetch("https://formsubmit.co/ajax/aliframadhani575@gmail.com", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          _subject: formData.subject ? `[Portfolio Contact] ${formData.subject} - ${formData.name}` : `[Portfolio Contact] Pesan Baru dari ${formData.name}`,
-          message: formData.message,
-          _template: "table",
-          _captcha: "false"
-        })
+      // 1. Send & Store to PostgreSQL Database & Auto-Email Dispatch
+      const result = await sendContactMessage({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        message: formData.message.trim()
       });
-
-      const data = await response.json();
 
       // Trigger celebratory confetti
       confetti({
@@ -77,7 +69,8 @@ export default function ContactCtaSection({ showToast }) {
       });
 
       setIsSentSuccess(true);
-      showToast('Pesan Anda berhasil dikirim langsung ke email aliframadhani575@gmail.com!', 'success');
+      const recipient = result.targetEmail || targetEmail;
+      showToast(`Pesan berhasil tersimpan di CMS & diteruskan ke ${recipient}!`, 'success');
       setFormData({ name: '', email: '', subject: '', message: '' });
 
       setTimeout(() => {
@@ -85,15 +78,14 @@ export default function ContactCtaSection({ showToast }) {
       }, 6000);
 
     } catch (err) {
-      console.warn("AJAX send fallback to mailto:", err);
-      // Fallback in case of offline/network block
-      const mailtoUrl = `mailto:aliframadhani575@gmail.com?subject=${encodeURIComponent(
+      console.warn("Contact submission fallback:", err);
+      const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(
         formData.subject || `Inquiry from ${formData.name}`
       )}&body=${encodeURIComponent(
         `Nama: ${formData.name}\nEmail: ${formData.email}\n\nPesan:\n${formData.message}`
       )}`;
       window.open(mailtoUrl, '_blank');
-      showToast('Membuka email client untuk mengirim pesan ke aliframadhani575@gmail.com', 'info');
+      showToast(`Membuka email client untuk mengirim pesan ke ${targetEmail}`, 'info');
     } finally {
       setIsSubmitting(false);
     }

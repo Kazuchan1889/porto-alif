@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ArrowRight, ExternalLink, Sparkles, FolderGit2, Eye } from 'lucide-react';
-import { projects } from '../data/portfolioData';
+import { usePortfolio } from '../context/PortfolioContext';
 
 export default function PortfolioSection({ onSelectProject }) {
+  const { projects } = usePortfolio();
   const [activeFilter, setActiveFilter] = useState('all');
 
   const categories = [

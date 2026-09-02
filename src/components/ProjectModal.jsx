@@ -36,9 +36,12 @@ export default function ProjectModal({ project, onClose }) {
         {/* Project Image Banner */}
         <div className="relative aspect-video sm:aspect-[21/9] w-full overflow-hidden bg-dark-850">
           <img
-            src={project.image}
+            src={project.image || '/assets/project-network.jpg'}
             alt={project.title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.src = '/assets/project-network.jpg';
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/30 to-transparent"></div>
           
@@ -70,7 +73,7 @@ export default function ProjectModal({ project, onClose }) {
           </p>
 
           {/* Key Features */}
-          {project.features && (
+          {project.features && project.features.length > 0 && (
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Key Features & Architectural Highlights:
@@ -92,7 +95,7 @@ export default function ProjectModal({ project, onClose }) {
               Technologies Used:
             </h4>
             <div className="flex flex-wrap gap-2">
-              {project.tech.map((t, idx) => (
+              {(project.tech || []).map((t, idx) => (
                 <span
                   key={idx}
                   className="text-xs font-semibold px-3 py-1 rounded-lg bg-white/[0.05] border border-white/10 text-slate-200"

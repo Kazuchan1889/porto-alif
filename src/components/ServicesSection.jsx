@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowRight, Layout, Smartphone, Database, Cpu, CheckCircle, Sparkles } from 'lucide-react';
-import { services } from '../data/portfolioData';
+import { ArrowRight, Layout, Smartphone, Database, Cpu, CheckCircle, Sparkles, Code2, Server, Globe } from 'lucide-react';
+import { usePortfolio } from '../context/PortfolioContext';
 
 export default function ServicesSection({ onSelectService }) {
+  const { services } = usePortfolio();
   const [activeCard, setActiveCard] = useState(null);
 
   const getServiceIcon = (iconName) => {
@@ -15,6 +16,12 @@ export default function ServicesSection({ onSelectService }) {
         return <Database className="w-6 h-6 text-indigo-400" />;
       case 'Cpu':
         return <Cpu className="w-6 h-6 text-amber-400" />;
+      case 'Code2':
+        return <Code2 className="w-6 h-6 text-emerald-400" />;
+      case 'Server':
+        return <Server className="w-6 h-6 text-sky-400" />;
+      case 'Globe':
+        return <Globe className="w-6 h-6 text-pink-400" />;
       default:
         return <Sparkles className="w-6 h-6 text-brand-cyan" />;
     }
@@ -30,7 +37,7 @@ export default function ServicesSection({ onSelectService }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
           
-          {/* LEFT COLUMN: Section Title & Pitch (matches reference left side) */}
+          {/* LEFT COLUMN: Section Title & Pitch */}
           <div className="lg:col-span-5 lg:sticky lg:top-28">
             
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-purple/10 border border-brand-purple/30 text-brand-violet text-xs font-semibold uppercase tracking-wider mb-4">
@@ -72,9 +79,9 @@ export default function ServicesSection({ onSelectService }) {
 
           </div>
 
-          {/* RIGHT COLUMN: Service Cards (matches reference right stacked cards) */}
+          {/* RIGHT COLUMN: Service Cards */}
           <div className="lg:col-span-7 space-y-4 sm:space-y-5">
-            {services.map((service, index) => {
+            {services.map((service) => {
               const isHovered = activeCard === service.id;
               return (
                 <div
@@ -104,7 +111,7 @@ export default function ServicesSection({ onSelectService }) {
                           {service.title}
                         </h3>
                         <p className="text-xs sm:text-sm font-semibold text-brand-violet mt-0.5">
-                          {service.subtitle}
+                          {service.subtitle || service.projectCount}
                         </p>
                       </div>
                     </div>
@@ -126,7 +133,7 @@ export default function ServicesSection({ onSelectService }) {
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-white/[0.05]">
-                    {service.skills.map((skill, idx) => (
+                    {(service.skills || []).map((skill, idx) => (
                       <span
                         key={idx}
                         className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-slate-300"

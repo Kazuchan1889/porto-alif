@@ -10,9 +10,10 @@ import {
   MapPin,
   Laptop
 } from 'lucide-react';
-import { personalInfo, techStack } from '../data/portfolioData';
+import { usePortfolio } from '../context/PortfolioContext';
 
 export default function AboutSection({ onDownloadCV }) {
+  const { personalInfo, techStack } = usePortfolio();
   return (
     <section id="about" className="relative py-20 lg:py-28 bg-dark-950/50 border-t border-white/[0.06] overflow-hidden">
       

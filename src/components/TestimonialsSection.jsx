@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import { Quote, ChevronLeft, ChevronRight, Star, Sparkles } from 'lucide-react';
-import { testimonial } from '../data/portfolioData';
+import { usePortfolio } from '../context/PortfolioContext';
 
 export default function TestimonialsSection() {
+  const { testimonial } = usePortfolio();
+
   const testimonials = [
     {
       id: 1,
-      quote: "Alif is an exceptionally talented and dedicated developer who consistently delivers clean, high-performance web and mobile solutions. His technical acumen in Vue.js and rapid problem-solving during our project execution was beyond our expectations.",
-      author: "Aditya Pratama",
-      role: "Senior Engineering Lead",
-      company: "Digital Infrastructure & Power Solutions",
-      avatar: "/assets/testimonial-avatar.jpg",
-      rating: 5
+      quote: testimonial?.quote || "Alif is an exceptionally talented and dedicated developer who consistently delivers clean, high-performance web and mobile solutions.",
+      author: testimonial?.author || "Lead Project Collaborator",
+      role: testimonial?.role || "Engineering Lead & Tech Mentor",
+      company: testimonial?.company || "Enterprise Software Division",
+      avatar: testimonial?.avatar || "/assets/testimonial-avatar.jpg",
+      rating: testimonial?.rating || 5
     },
     {
       id: 2,
-      quote: "Working with Alif on the Antreless mobile ordering platform was a fantastic experience. He engineered smooth routing, state management, and robust REST API integrations with impressive speed and attention to detail.",
+      quote: "Working with Alif on the Antreless mobile ordering platform was a fantastic experience. He engineered smooth routing, state management, and robust REST API integrations with impressive speed.",
       author: "Rian Hidayat",
       role: "Product Lead",
       company: "Antreless Campus Tech",
-      avatar: "/assets/alif-portrait.jpg",
+      avatar: "/assets/alip-real-photo.jpg",
       rating: 5
     }
   ];
