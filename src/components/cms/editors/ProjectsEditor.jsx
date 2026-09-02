@@ -17,6 +17,7 @@ import {
   Building2
 } from 'lucide-react';
 import { usePortfolio } from '../../../context/PortfolioContext';
+import FileUploadField from '../common/FileUploadField';
 
 const CATEGORY_OPTIONS = [
   { label: 'Web Application', key: 'web', category: 'Web App' },
@@ -460,35 +461,18 @@ export default function ProjectsEditor({ showToast }) {
                 </div>
               </div>
 
-              {/* Image URL & Presets */}
+              {/* Project Image Upload from Folder */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  URL Gambar Proyek
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                    placeholder="/assets/project-network.jpg atau https://..."
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-dark-800 border border-white/10 text-white text-sm focus:border-brand-purple focus:outline-none"
-                  />
-                </div>
-
-                {/* Preset image quick buttons */}
-                <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1 text-[11px]">
-                  <span className="text-slate-500">Pilihan Cepat:</span>
-                  {PRESET_IMAGES.map((img, idx) => (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => setFormData({ ...formData, image: img.url })}
-                      className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.1] text-slate-300 hover:text-white transition-colors whitespace-nowrap"
-                    >
-                      {img.label}
-                    </button>
-                  ))}
-                </div>
+                <FileUploadField
+                  label="Gambar / Thumbnail Proyek"
+                  type="image"
+                  accept="image/*"
+                  value={formData.image}
+                  onChange={(val) => setFormData({ ...formData, image: val })}
+                  presetOptions={PRESET_IMAGES}
+                  helperText="Unggah tangkapan layar (screenshot), banner, atau mockup proyek dari folder komputer."
+                  showToast={showToast}
+                />
               </div>
 
               {/* Short & Full Description */}

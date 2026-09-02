@@ -19,7 +19,7 @@ export const Project = sequelize.define('Project', {
     defaultValue: 'web'
   },
   image: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     defaultValue: '/assets/project-network.jpg'
   },
   client: {

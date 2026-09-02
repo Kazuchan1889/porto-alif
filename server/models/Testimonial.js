@@ -24,7 +24,7 @@ export const Testimonial = sequelize.define('Testimonial', {
     defaultValue: 'Tech Enterprise'
   },
   avatar: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     defaultValue: '/assets/testimonial-avatar.jpg'
   },
   rating: {

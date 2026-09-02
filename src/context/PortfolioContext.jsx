@@ -49,10 +49,16 @@ export function PortfolioProvider({ children }) {
   // Fetch live portfolio data from PostgreSQL API
   const refreshData = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/portfolio`);
+      const res = await fetch(`${API_BASE}/portfolio?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       if (res.ok) {
         const dbData = await res.json();
-        setData({
+        const freshData = {
           personalInfo: dbData.personalInfo || defaultData.personalInfo,
           techStack: dbData.techStack || defaultData.techStack,
           services: dbData.services || defaultData.services,
@@ -63,9 +69,13 @@ export function PortfolioProvider({ children }) {
           projects: dbData.projects || defaultData.projects,
           testimonial: dbData.testimonial || defaultData.testimonial,
           contactMessages: dbData.contactMessages || [],
-        });
+        };
+        setData(freshData);
         setUnreadMessagesCount(dbData.unreadMessagesCount ?? (dbData.contactMessages?.filter(m => !m.read).length || 0));
         setIsDbConnected(true);
+        console.log('✅ Portfolio data synced live from PostgreSQL database.');
+      } else {
+        console.warn(`API responded with status ${res.status}`);
       }
     } catch (err) {
       console.warn('API backend not reachable yet, using local state / cache:', err.message);

@@ -10,6 +10,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { usePortfolio } from '../../../context/PortfolioContext';
+import FileUploadField from '../common/FileUploadField';
 
 export default function TestimonialsEditor({ showToast }) {
   const { testimonial, updateTestimonial } = usePortfolio();
@@ -135,18 +136,19 @@ export default function TestimonialsEditor({ showToast }) {
             />
           </div>
 
-          {/* Avatar URL */}
+          {/* Avatar Upload from Folder */}
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              URL Foto Avatar
-            </label>
-            <input
-              type="text"
-              name="avatar"
+            <FileUploadField
+              label="Foto Avatar Pemberi Rekomendasi"
+              type="image"
+              accept="image/*"
               value={formData.avatar}
-              onChange={handleChange}
-              placeholder="/assets/testimonial-avatar.jpg"
-              className="w-full px-4 py-2.5 rounded-xl bg-dark-800/90 border border-white/10 text-white text-sm focus:border-brand-purple focus:outline-none"
+              onChange={(val) => setFormData(prev => ({ ...prev, avatar: val }))}
+              presetOptions={[
+                { label: 'Avatar Default', url: '/assets/testimonial-avatar.jpg' }
+              ]}
+              helperText="Unggah foto avatar mentor atau rekan kolaborator dari folder komputer Anda."
+              showToast={showToast}
             />
           </div>
 

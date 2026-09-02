@@ -1,4 +1,7 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { 
   PersonalInfo, 
   TechStack, 
@@ -13,7 +16,16 @@ import {
 } from '../models/index.js';
 import { seedDatabase } from '../scripts/seed.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
+
+// Ensure all portfolio API responses are never cached by browsers or proxies
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  next();
+});
 
 // ===================== FULL PORTFOLIO GET =====================
 router.get('/portfolio', async (req, res) => {
@@ -405,6 +417,72 @@ router.delete('/contact-messages/:id', async (req, res) => {
     res.json({ success: true, message: 'Message deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete message', details: err.message });
+  }
+});
+
+// ===================== FILE UPLOAD ENDPOINT =====================
+router.post('/upload', async (req, res) => {
+  try {
+    const { fileData, fileName, fileType } = req.body;
+
+    if (!fileData) {
+      return res.status(400).json({ error: 'File data is required' });
+    }
+
+    // Determine target directory: public/uploads
+    const uploadsDir = path.resolve(__dirname, '../../public/uploads');
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+
+    let fileBuffer;
+    let extension = '';
+
+    // Handle Data URL format: "data:image/png;base64,..." or plain base64
+    if (fileData.startsWith('data:')) {
+      const matches = fileData.match(/^data:([A-Za-z-+/0-9]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        fileBuffer = Buffer.from(matches[2], 'base64');
+        if (!extension) {
+          if (mimeType.includes('pdf')) extension = '.pdf';
+          else if (mimeType.includes('png')) extension = '.png';
+          else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) extension = '.jpg';
+          else if (mimeType.includes('webp')) extension = '.webp';
+          else if (mimeType.includes('svg')) extension = '.svg';
+          else if (mimeType.includes('gif')) extension = '.gif';
+        }
+      } else {
+        fileBuffer = Buffer.from(fileData.split(',')[1] || fileData, 'base64');
+      }
+    } else {
+      fileBuffer = Buffer.from(fileData, 'base64');
+    }
+
+    // Clean and sanitize filename
+    let cleanName = (fileName || 'file')
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .toLowerCase();
+
+    if (extension && !cleanName.endsWith(extension)) {
+      cleanName = `${cleanName}${extension}`;
+    }
+
+    const uniqueFileName = `${Date.now()}-${cleanName}`;
+    const destinationPath = path.join(uploadsDir, uniqueFileName);
+
+    await fs.promises.writeFile(destinationPath, fileBuffer);
+
+    const publicUrl = `/uploads/${uniqueFileName}`;
+
+    res.json({
+      success: true,
+      url: publicUrl,
+      fileName: cleanName,
+      size: fileBuffer.length,
+      message: 'File berhasil diunggah ke server'
+    });
+  } catch (err) {
+    console.error('Error in /api/upload endpoint:', err);
+    res.status(500).json({ error: 'Failed to upload file', details: err.message });
   }
 });
 

@@ -12,6 +12,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { usePortfolio } from '../../../context/PortfolioContext';
+import FileUploadField from '../common/FileUploadField';
 
 export default function PersonalInfoEditor({ showToast }) {
   const { personalInfo, updatePersonalInfo } = usePortfolio();
@@ -276,40 +277,39 @@ export default function PersonalInfoEditor({ showToast }) {
       <div className="p-6 sm:p-8 rounded-3xl bg-dark-900/70 border border-white/10 space-y-6">
         <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
           <ImageIcon className="w-4 h-4 text-brand-violet" />
-          <span>Tautan Media & Dokumen CV</span>
+          <span>Upload Foto Profil & Dokumen CV (PDF)</span>
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Foto Avatar / Profil URL
-            </label>
-            <input
-              type="text"
-              name="avatarUrl"
-              value={formData.avatarUrl}
-              onChange={handleChange}
-              placeholder="/assets/alip-real-photo.jpg atau https://..."
-              className="w-full px-4 py-2.5 rounded-xl bg-dark-800/90 border border-white/10 text-white placeholder-slate-500 text-sm focus:border-brand-purple"
-            />
-            <p className="text-[11px] text-slate-500 mt-1">Gunakan path lokal atau URL gambar langsung.</p>
-          </div>
+          {/* Avatar Profile Photo Upload */}
+          <FileUploadField
+            label="Foto Profil / Avatar Pengembang"
+            type="image"
+            accept="image/*"
+            value={formData.avatarUrl}
+            onChange={(val) => setFormData(prev => ({ ...prev, avatarUrl: val }))}
+            helperText="Pilih foto profil langsung dari folder komputer Anda. Format JPG, PNG, WEBP."
+            presetOptions={[
+              { label: 'Foto Utama', url: '/assets/alip-real-photo.jpg' },
+              { label: 'Foto Portrait', url: '/assets/alif-portrait.jpg' }
+            ]}
+            showToast={showToast}
+          />
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Tautan File Dokumen CV (PDF)
-            </label>
-            <input
-              type="text"
-              name="cvUrl"
-              value={formData.cvUrl}
-              onChange={handleChange}
-              placeholder="/CV - Muhammad Alif Ramadhani.pdf"
-              className="w-full px-4 py-2.5 rounded-xl bg-dark-800/90 border border-white/10 text-white placeholder-slate-500 text-sm focus:border-brand-purple"
-            />
-            <p className="text-[11px] text-slate-500 mt-1">Digunakan saat pengunjung menekan tombol Download CV.</p>
-          </div>
+          {/* CV Document (PDF) Upload */}
+          <FileUploadField
+            label="Dokumen Resume / CV (Format PDF)"
+            type="document"
+            accept=".pdf,application/pdf"
+            value={formData.cvUrl}
+            onChange={(val) => setFormData(prev => ({ ...prev, cvUrl: val }))}
+            helperText="Pilih file PDF CV langsung dari folder komputer Anda. Digunakan saat pengunjung mengklik tombol 'Download CV'."
+            presetOptions={[
+              { label: 'CV Default', url: '/CV - Muhammad Alif Ramadhani.pdf' }
+            ]}
+            showToast={showToast}
+          />
 
         </div>
       </div>

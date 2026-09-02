@@ -62,11 +62,11 @@ export const PersonalInfo = sequelize.define('PersonalInfo', {
     defaultValue: 'https://github.com/aliframadhani'
   },
   cvUrl: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     defaultValue: '/CV - Muhammad Alif Ramadhani.pdf'
   },
   avatarUrl: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     defaultValue: '/assets/alip-real-photo.jpg'
   },
   stats: {
