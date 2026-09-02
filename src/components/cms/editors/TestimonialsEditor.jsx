@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Save, 
   MessageSquare, 
@@ -23,6 +23,19 @@ export default function TestimonialsEditor({ showToast }) {
     avatar: testimonial?.avatar || '/assets/testimonial-avatar.jpg',
     rating: testimonial?.rating || 5
   });
+
+  useEffect(() => {
+    if (testimonial) {
+      setFormData({
+        quote: testimonial.quote || '',
+        author: testimonial.author || '',
+        role: testimonial.role || '',
+        company: testimonial.company || '',
+        avatar: testimonial.avatar || '/assets/testimonial-avatar.jpg',
+        rating: testimonial.rating || 5
+      });
+    }
+  }, [testimonial]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

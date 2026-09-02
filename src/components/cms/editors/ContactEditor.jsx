@@ -40,14 +40,28 @@ export default function ContactEditor({ showToast }) {
   const [selectedMessage, setSelectedMessage] = useState(null);
 
   const [formData, setFormData] = useState({
-    email: personalInfo.email || '',
-    contactReceiverEmail: personalInfo.contactReceiverEmail || personalInfo.email || 'aliframadhani575@gmail.com',
-    phone: personalInfo.phone || '',
-    whatsapp: personalInfo.whatsapp || '',
-    linkedin: personalInfo.linkedin || '',
-    github: personalInfo.github || '',
-    location: personalInfo.location || ''
+    email: personalInfo?.email || '',
+    contactReceiverEmail: personalInfo?.contactReceiverEmail || personalInfo?.email || 'aliframadhani575@gmail.com',
+    phone: personalInfo?.phone || '',
+    whatsapp: personalInfo?.whatsapp || '',
+    linkedin: personalInfo?.linkedin || '',
+    github: personalInfo?.github || '',
+    location: personalInfo?.location || ''
   });
+
+  useEffect(() => {
+    if (personalInfo) {
+      setFormData({
+        email: personalInfo.email || '',
+        contactReceiverEmail: personalInfo.contactReceiverEmail || personalInfo.email || 'aliframadhani575@gmail.com',
+        phone: personalInfo.phone || '',
+        whatsapp: personalInfo.whatsapp || '',
+        linkedin: personalInfo.linkedin || '',
+        github: personalInfo.github || '',
+        location: personalInfo.location || ''
+      });
+    }
+  }, [personalInfo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

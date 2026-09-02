@@ -13,7 +13,10 @@ import {
 import { usePortfolio } from '../context/PortfolioContext';
 
 export default function AboutSection({ onDownloadCV }) {
-  const { personalInfo, techStack } = usePortfolio();
+  const { personalInfo, techStack, education } = usePortfolio();
+
+  const primaryEdu = education && education.length > 0 ? education[0] : null;
+
   return (
     <section id="about" className="relative py-20 lg:py-28 bg-dark-950/50 border-t border-white/[0.06] overflow-hidden">
       
@@ -39,12 +42,17 @@ export default function AboutSection({ onDownloadCV }) {
             </h2>
 
             <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
-              <p>
-                Hello! I'm <strong className="text-white">Muhammad Alif Ramadhani</strong>, a Computer Science student at <span className="text-brand-cyan">Universitas Bina Nusantara (BINUS)</span> with a GPA of 3.23. I specialize in front-end web development, mobile application engineering, and data processing architectures.
-              </p>
-              <p className="text-slate-400">
-                During my tenure at <strong className="text-slate-200">PT PLN Icon Plus</strong>, I developed the mission-critical Network Model Management application using Vue.js for managing complex power grid topological diagrams, alongside an automated OCR table extraction web tool and PostgreSQL data schemas. At <strong className="text-slate-200">Antreless</strong>, I engineered seamless mobile food ordering screen routing and REST API integrations with Flutter.
-              </p>
+              {personalInfo.about ? (
+                personalInfo.about.split('\n\n').map((paragraph, idx) => (
+                  <p key={idx} className={idx > 0 ? "text-slate-400" : ""}>
+                    {paragraph}
+                  </p>
+                ))
+              ) : (
+                <p>
+                  Hello! I'm <strong className="text-white">{personalInfo.name}</strong>, a {personalInfo.role} based in <span className="text-brand-cyan">{personalInfo.location}</span>.
+                </p>
+              )}
             </div>
 
             {/* Value Highlights */}
@@ -54,15 +62,21 @@ export default function AboutSection({ onDownloadCV }) {
                   <Laptop className="w-4 h-4 text-brand-cyan" />
                   <span>Modern Tech Stack</span>
                 </div>
-                <p className="text-xs text-slate-400">Vue.js, React.js, Tailwind CSS, Flutter, Python, PostgreSQL</p>
+                <p className="text-xs text-slate-400">
+                  {techStack.slice(0, 6).map(t => t.name).join(', ') || 'Vue.js, React.js, Tailwind CSS, Flutter, PostgreSQL'}
+                </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/[0.08]">
                 <div className="flex items-center gap-2.5 text-white font-bold text-sm mb-1">
                   <GraduationCap className="w-4 h-4 text-brand-violet" />
-                  <span>Academic Excellence</span>
+                  <span>Academic Background</span>
                 </div>
-                <p className="text-xs text-slate-400">Computer Science BINUS University (2022 - 2026 Expected)</p>
+                <p className="text-xs text-slate-400">
+                  {primaryEdu 
+                    ? `${primaryEdu.degree} - ${primaryEdu.institution} (${primaryEdu.period})` 
+                    : 'Computer Science BINUS University (2022 - 2026 Expected)'}
+                </p>
               </div>
             </div>
 

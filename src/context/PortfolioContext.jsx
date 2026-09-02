@@ -14,15 +14,15 @@ export function PortfolioProvider({ children }) {
         const parsed = JSON.parse(saved);
         return {
           personalInfo: parsed.personalInfo || defaultData.personalInfo,
-          techStack: parsed.techStack || defaultData.techStack,
-          services: parsed.services || defaultData.services,
-          experiences: parsed.experiences || defaultData.experiences,
-          education: parsed.education || defaultData.education,
-          volunteering: parsed.volunteering || defaultData.volunteering,
-          certifications: parsed.certifications || defaultData.certifications,
-          projects: parsed.projects || defaultData.projects,
+          techStack: Array.isArray(parsed.techStack) ? parsed.techStack : defaultData.techStack,
+          services: Array.isArray(parsed.services) ? parsed.services : defaultData.services,
+          experiences: Array.isArray(parsed.experiences) ? parsed.experiences : defaultData.experiences,
+          education: Array.isArray(parsed.education) ? parsed.education : defaultData.education,
+          volunteering: Array.isArray(parsed.volunteering) ? parsed.volunteering : defaultData.volunteering,
+          certifications: Array.isArray(parsed.certifications) ? parsed.certifications : defaultData.certifications,
+          projects: Array.isArray(parsed.projects) ? parsed.projects : defaultData.projects,
           testimonial: parsed.testimonial || defaultData.testimonial,
-          contactMessages: parsed.contactMessages || [],
+          contactMessages: Array.isArray(parsed.contactMessages) ? parsed.contactMessages : [],
         };
       }
     } catch (e) {
@@ -45,6 +45,7 @@ export function PortfolioProvider({ children }) {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
   // Fetch live portfolio data from PostgreSQL API
   const refreshData = useCallback(async () => {
@@ -59,26 +60,38 @@ export function PortfolioProvider({ children }) {
       if (res.ok) {
         const dbData = await res.json();
         const freshData = {
-          personalInfo: dbData.personalInfo || defaultData.personalInfo,
-          techStack: dbData.techStack || defaultData.techStack,
-          services: dbData.services || defaultData.services,
-          experiences: dbData.experiences || defaultData.experiences,
-          education: dbData.education || defaultData.education,
-          volunteering: dbData.volunteering || defaultData.volunteering,
-          certifications: dbData.certifications || defaultData.certifications,
-          projects: dbData.projects || defaultData.projects,
-          testimonial: dbData.testimonial || defaultData.testimonial,
-          contactMessages: dbData.contactMessages || [],
+          personalInfo: dbData.personalInfo ? {
+            ...defaultData.personalInfo,
+            ...dbData.personalInfo,
+            stats: {
+              ...defaultData.personalInfo.stats,
+              ...(dbData.personalInfo.stats || {})
+            }
+          } : defaultData.personalInfo,
+          techStack: Array.isArray(dbData.techStack) ? dbData.techStack : defaultData.techStack,
+          services: Array.isArray(dbData.services) ? dbData.services : defaultData.services,
+          experiences: Array.isArray(dbData.experiences) ? dbData.experiences : defaultData.experiences,
+          education: Array.isArray(dbData.education) ? dbData.education : defaultData.education,
+          volunteering: Array.isArray(dbData.volunteering) ? dbData.volunteering : defaultData.volunteering,
+          certifications: Array.isArray(dbData.certifications) ? dbData.certifications : defaultData.certifications,
+          projects: Array.isArray(dbData.projects) ? dbData.projects : defaultData.projects,
+          testimonial: dbData.testimonial ? {
+            ...defaultData.testimonial,
+            ...dbData.testimonial
+          } : defaultData.testimonial,
+          contactMessages: Array.isArray(dbData.contactMessages) ? dbData.contactMessages : [],
         };
         setData(freshData);
         setUnreadMessagesCount(dbData.unreadMessagesCount ?? (dbData.contactMessages?.filter(m => !m.read).length || 0));
         setIsDbConnected(true);
-        console.log('✅ Portfolio data synced live from PostgreSQL database.');
+        setLastSyncedAt(new Date().toLocaleTimeString());
+        console.log('✅ Portfolio data synchronized live with PostgreSQL database.');
       } else {
         console.warn(`API responded with status ${res.status}`);
+        setIsDbConnected(false);
       }
     } catch (err) {
-      console.warn('API backend not reachable yet, using local state / cache:', err.message);
+      console.warn('API backend unreachable, using local cache:', err.message);
       setIsDbConnected(false);
     } finally {
       setIsLoading(false);
@@ -89,7 +102,7 @@ export function PortfolioProvider({ children }) {
     refreshData();
   }, [refreshData]);
 
-  // Sync to localStorage as offline cache
+  // Sync to localStorage as local cache
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -115,6 +128,7 @@ export function PortfolioProvider({ children }) {
       certifications: defaultData.certifications,
       projects: defaultData.projects,
       testimonial: defaultData.testimonial,
+      contactMessages: [],
     });
     localStorage.removeItem(STORAGE_KEY);
     await refreshData();
@@ -159,11 +173,23 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, personalInfo: merged }));
 
     try {
-      await fetch(`${API_BASE}/personal-info`, {
+      const res = await fetch(`${API_BASE}/personal-info`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(merged)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          personalInfo: {
+            ...prev.personalInfo,
+            ...saved
+          }
+        }));
+        setIsDbConnected(true);
+        setLastSyncedAt(new Date().toLocaleTimeString());
+      }
     } catch (err) {
       console.error('Failed to sync personal info with PostgreSQL:', err);
     }
@@ -176,11 +202,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, techStack: [...prev.techStack, item] }));
 
     try {
-      await fetch(`${API_BASE}/tech-stack`, {
+      const res = await fetch(`${API_BASE}/tech-stack`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          techStack: prev.techStack.map(t => t.id === id ? saved : t)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add tech stack to PostgreSQL:', err);
     }
@@ -202,11 +236,14 @@ export function PortfolioProvider({ children }) {
 
     if (target?.id) {
       try {
-        await fetch(`${API_BASE}/tech-stack/${target.id}`, {
+        const res = await fetch(`${API_BASE}/tech-stack/${target.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...target, ...updatedTech })
         });
+        if (res.ok) {
+          setIsDbConnected(true);
+        }
       } catch (err) {
         console.error('Failed to update tech stack in PostgreSQL:', err);
       }
@@ -227,7 +264,8 @@ export function PortfolioProvider({ children }) {
 
     if (target?.id) {
       try {
-        await fetch(`${API_BASE}/tech-stack/${target.id}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE}/tech-stack/${target.id}`, { method: 'DELETE' });
+        if (res.ok) setIsDbConnected(true);
       } catch (err) {
         console.error('Failed to delete tech stack from PostgreSQL:', err);
       }
@@ -241,11 +279,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, services: [...prev.services, item] }));
 
     try {
-      await fetch(`${API_BASE}/services`, {
+      const res = await fetch(`${API_BASE}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          services: prev.services.map(s => s.id === id ? saved : s)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add service to PostgreSQL:', err);
     }
@@ -258,11 +304,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/services/${id}`, {
+      const res = await fetch(`${API_BASE}/services/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedService)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update service in PostgreSQL:', err);
     }
@@ -275,7 +322,8 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/services/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/services/${id}`, { method: 'DELETE' });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete service from PostgreSQL:', err);
     }
@@ -288,11 +336,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, experiences: [item, ...prev.experiences] }));
 
     try {
-      await fetch(`${API_BASE}/experiences`, {
+      const res = await fetch(`${API_BASE}/experiences`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          experiences: prev.experiences.map(e => e.id === id ? saved : e)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add experience to PostgreSQL:', err);
     }
@@ -305,11 +361,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/experiences/${id}`, {
+      const res = await fetch(`${API_BASE}/experiences/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedExp)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update experience in PostgreSQL:', err);
     }
@@ -322,7 +379,8 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/experiences/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/experiences/${id}`, { method: 'DELETE' });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete experience from PostgreSQL:', err);
     }
@@ -335,11 +393,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, education: [...prev.education, item] }));
 
     try {
-      await fetch(`${API_BASE}/education`, {
+      const res = await fetch(`${API_BASE}/education`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          education: prev.education.map(e => e.id === id ? saved : e)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add education to PostgreSQL:', err);
     }
@@ -352,11 +418,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/education/${id}`, {
+      const res = await fetch(`${API_BASE}/education/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedEdu)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update education in PostgreSQL:', err);
     }
@@ -369,7 +436,8 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/education/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/education/${id}`, { method: 'DELETE' });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete education from PostgreSQL:', err);
     }
@@ -382,11 +450,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, volunteering: [...prev.volunteering, item] }));
 
     try {
-      await fetch(`${API_BASE}/volunteering`, {
+      const res = await fetch(`${API_BASE}/volunteering`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          volunteering: prev.volunteering.map(v => v.id === id ? saved : v)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add volunteering to PostgreSQL:', err);
     }
@@ -399,11 +475,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/volunteering/${id}`, {
+      const res = await fetch(`${API_BASE}/volunteering/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedVol)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update volunteering in PostgreSQL:', err);
     }
@@ -416,7 +493,8 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/volunteering/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/volunteering/${id}`, { method: 'DELETE' });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete volunteering from PostgreSQL:', err);
     }
@@ -429,11 +507,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, certifications: [...prev.certifications, item] }));
 
     try {
-      await fetch(`${API_BASE}/certifications`, {
+      const res = await fetch(`${API_BASE}/certifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          certifications: prev.certifications.map(c => c.id === id ? saved : c)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add certification to PostgreSQL:', err);
     }
@@ -446,11 +532,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/certifications/${id}`, {
+      const res = await fetch(`${API_BASE}/certifications/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedCert)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update certification in PostgreSQL:', err);
     }
@@ -463,7 +550,8 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/certifications/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/certifications/${id}`, { method: 'DELETE' });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete certification from PostgreSQL:', err);
     }
@@ -476,11 +564,19 @@ export function PortfolioProvider({ children }) {
     setData(prev => ({ ...prev, projects: [item, ...prev.projects] }));
 
     try {
-      await fetch(`${API_BASE}/projects`, {
+      const res = await fetch(`${API_BASE}/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (res.ok) {
+        const saved = await res.json();
+        setData(prev => ({
+          ...prev,
+          projects: prev.projects.map(p => p.id === id ? saved : p)
+        }));
+        setIsDbConnected(true);
+      }
     } catch (err) {
       console.error('Failed to add project to PostgreSQL:', err);
     }
@@ -493,11 +589,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/projects/${id}`, {
+      const res = await fetch(`${API_BASE}/projects/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedProject)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update project in PostgreSQL:', err);
     }
@@ -510,7 +607,8 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/projects/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/projects/${id}`, { method: 'DELETE' });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete project from PostgreSQL:', err);
     }
@@ -527,11 +625,12 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/testimonials`, {
+      const res = await fetch(`${API_BASE}/testimonials`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedTestimonial)
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to update testimonial in PostgreSQL:', err);
     }
@@ -555,6 +654,7 @@ export function PortfolioProvider({ children }) {
           }));
           setUnreadMessagesCount(prev => prev + 1);
         }
+        setIsDbConnected(true);
         return { success: true, targetEmail: result.targetEmail, emailSent: result.emailSent };
       } else {
         const err = await res.json();
@@ -577,11 +677,12 @@ export function PortfolioProvider({ children }) {
     setUnreadMessagesCount(prev => newStatus ? Math.max(0, prev - 1) : prev + 1);
 
     try {
-      await fetch(`${API_BASE}/contact-messages/${id}/read`, {
+      const res = await fetch(`${API_BASE}/contact-messages/${id}/read`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ read: newStatus })
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to toggle message read status:', err);
     }
@@ -598,9 +699,10 @@ export function PortfolioProvider({ children }) {
     }));
 
     try {
-      await fetch(`${API_BASE}/contact-messages/${id}`, {
+      const res = await fetch(`${API_BASE}/contact-messages/${id}`, {
         method: 'DELETE'
       });
+      if (res.ok) setIsDbConnected(true);
     } catch (err) {
       console.error('Failed to delete contact message:', err);
     }
@@ -613,6 +715,7 @@ export function PortfolioProvider({ children }) {
         const resData = await res.json();
         setData(prev => ({ ...prev, contactMessages: resData.messages || [] }));
         setUnreadMessagesCount(resData.unreadCount || 0);
+        setIsDbConnected(true);
       }
     } catch (err) {
       console.error('Failed to fetch contact messages:', err);
@@ -624,6 +727,7 @@ export function PortfolioProvider({ children }) {
     unreadMessagesCount,
     isLoading,
     isDbConnected,
+    lastSyncedAt,
     refreshData,
     sendContactMessage,
     toggleMessageRead,

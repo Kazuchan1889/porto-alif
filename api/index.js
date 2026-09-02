@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import portfolioRoutes from '../server/routes/portfolioRoutes.js';
-import { sequelize, testConnection } from '../server/models/index.js';
+import { sequelize } from '../server/models/index.js';
 
 dotenv.config();
 
@@ -11,15 +11,19 @@ const app = express();
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'X-Requested-With', 'Expires']
 }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// API Routes mounted on both /api and /
-app.use('/api', portfolioRoutes);
-app.use('/', portfolioRoutes);
+// Set no-cache on all responses
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
 
 // Detailed Health Check with live DB test
 const healthHandler = async (req, res) => {
@@ -45,9 +49,18 @@ const healthHandler = async (req, res) => {
 app.get('/api/health', healthHandler);
 app.get('/health', healthHandler);
 
-// Root fallback
-app.get('/', (req, res) => {
-  res.json({ message: 'Portfolio API Backend Root - Supabase PostgreSQL' });
+// API Routes mounted on both /api and /
+app.use('/api', portfolioRoutes);
+app.use('/', portfolioRoutes);
+
+// 404 handler for unmatched API routes
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: 'API route not found', 
+    path: req.url,
+    method: req.method,
+    message: 'Portfolio API Backend - Supabase PostgreSQL'
+  });
 });
 
 // Vercel Serverless Function Handler

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Save, 
   User, 
@@ -17,22 +17,45 @@ import FileUploadField from '../common/FileUploadField';
 export default function PersonalInfoEditor({ showToast }) {
   const { personalInfo, updatePersonalInfo } = usePortfolio();
   const [formData, setFormData] = useState({
-    name: personalInfo.name || '',
-    shortName: personalInfo.shortName || '',
-    brandName: personalInfo.brandName || '',
-    role: personalInfo.role || '',
-    tagline: personalInfo.tagline || '',
-    about: personalInfo.about || '',
-    location: personalInfo.location || '',
-    avatarUrl: personalInfo.avatarUrl || '',
-    cvUrl: personalInfo.cvUrl || '',
+    name: personalInfo?.name || '',
+    shortName: personalInfo?.shortName || '',
+    brandName: personalInfo?.brandName || '',
+    role: personalInfo?.role || '',
+    tagline: personalInfo?.tagline || '',
+    about: personalInfo?.about || '',
+    location: personalInfo?.location || '',
+    avatarUrl: personalInfo?.avatarUrl || '',
+    cvUrl: personalInfo?.cvUrl || '',
     stats: {
-      yearsExperience: personalInfo.stats?.yearsExperience || '1+',
-      completedProjects: personalInfo.stats?.completedProjects || '12+',
-      happyClients: personalInfo.stats?.happyClients || '10+',
-      techSkillsCount: personalInfo.stats?.techSkillsCount || '8+'
+      yearsExperience: personalInfo?.stats?.yearsExperience || '1+',
+      completedProjects: personalInfo?.stats?.completedProjects || '12+',
+      happyClients: personalInfo?.stats?.happyClients || '10+',
+      techSkillsCount: personalInfo?.stats?.techSkillsCount || '8+'
     }
   });
+
+  // Keep form synchronized when data finishes loading from PostgreSQL
+  useEffect(() => {
+    if (personalInfo) {
+      setFormData({
+        name: personalInfo.name || '',
+        shortName: personalInfo.shortName || '',
+        brandName: personalInfo.brandName || '',
+        role: personalInfo.role || '',
+        tagline: personalInfo.tagline || '',
+        about: personalInfo.about || '',
+        location: personalInfo.location || '',
+        avatarUrl: personalInfo.avatarUrl || '',
+        cvUrl: personalInfo.cvUrl || '',
+        stats: {
+          yearsExperience: personalInfo.stats?.yearsExperience || '1+',
+          completedProjects: personalInfo.stats?.completedProjects || '12+',
+          happyClients: personalInfo.stats?.happyClients || '10+',
+          techSkillsCount: personalInfo.stats?.techSkillsCount || '8+'
+        }
+      });
+    }
+  }, [personalInfo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

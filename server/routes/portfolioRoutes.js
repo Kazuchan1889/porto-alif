@@ -24,53 +24,15 @@ const router = express.Router();
 // Ensure all portfolio API responses are never cached by browsers or proxies
 router.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   next();
 });
-
-let isSynced = false;
-const ensureDbSync = async () => {
-  if (!isSynced) {
-    try {
-      await PersonalInfo.sync();
-      await TechStack.sync();
-      await Service.sync();
-      await Experience.sync();
-      await Education.sync();
-      await Certification.sync();
-      await Volunteering.sync();
-      await Project.sync();
-      await Testimonial.sync();
-      await ContactMessage.sync();
-      isSynced = true;
-    } catch (e) {
-      console.warn('Sync table check notice:', e.message);
-    }
-  }
-};
 
 // ===================== FULL PORTFOLIO GET =====================
 router.get('/portfolio', async (req, res) => {
   try {
-    await ensureDbSync();
-
-    let personalInfo = await PersonalInfo.findOne();
-    if (!personalInfo) {
-      await seedDatabase(false);
-      personalInfo = await PersonalInfo.findOne();
-    }
-
-    const techStack = await TechStack.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] });
-    const services = await Service.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] });
-    const experiences = await Experience.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] });
-    const education = await Education.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] });
-    const certifications = await Certification.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] });
-    const volunteering = await Volunteering.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] });
-    const projects = await Project.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] });
-    const testimonial = await Testimonial.findOne();
-    const contactMessages = await ContactMessage.findAll({ order: [['createdAt', 'DESC']] });
-    const unreadMessagesCount = await ContactMessage.count({ where: { read: false } });
-
-    res.json({
+    const [
       personalInfo,
       techStack,
       services,
@@ -82,10 +44,53 @@ router.get('/portfolio', async (req, res) => {
       testimonial,
       contactMessages,
       unreadMessagesCount
+    ] = await Promise.all([
+      PersonalInfo.findOne(),
+      TechStack.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
+      Service.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
+      Experience.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] }),
+      Education.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
+      Certification.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
+      Volunteering.findAll({ order: [['order', 'ASC'], ['createdAt', 'ASC']] }),
+      Project.findAll({ order: [['order', 'ASC'], ['createdAt', 'DESC']] }),
+      Testimonial.findOne(),
+      ContactMessage.findAll({ order: [['createdAt', 'DESC']] }),
+      ContactMessage.count({ where: { read: false } })
+    ]);
+
+    // If database was empty for personalInfo, seed initial defaults once
+    let finalPersonalInfo = personalInfo;
+    if (!finalPersonalInfo) {
+      try {
+        await seedDatabase(false);
+        finalPersonalInfo = await PersonalInfo.findOne();
+      } catch (seedErr) {
+        console.warn('Auto-seed warning:', seedErr.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      personalInfo: finalPersonalInfo,
+      techStack,
+      services,
+      experiences,
+      education,
+      certifications,
+      volunteering,
+      projects,
+      testimonial,
+      contactMessages,
+      unreadMessagesCount,
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
-    console.error('Error fetching portfolio data:', err);
-    res.status(500).json({ error: 'Failed to fetch portfolio data', details: err.message });
+    console.error('Error fetching portfolio data from PostgreSQL:', err);
+    res.status(500).json({ 
+      error: 'Failed to fetch portfolio data', 
+      details: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -452,66 +457,36 @@ router.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'File data is required' });
     }
 
-    // Determine target directory: public/uploads
-    const uploadsDir = path.resolve(__dirname, '../../public/uploads');
-    await fs.promises.mkdir(uploadsDir, { recursive: true });
-
-    let fileBuffer;
-    let extension = '';
-
-    // Handle Data URL format: "data:image/png;base64,..." or plain base64
-    if (fileData.startsWith('data:')) {
-      const matches = fileData.match(/^data:([A-Za-z-+/0-9]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mimeType = matches[1];
-        fileBuffer = Buffer.from(matches[2], 'base64');
-        if (!extension) {
-          if (mimeType.includes('pdf')) extension = '.pdf';
-          else if (mimeType.includes('png')) extension = '.png';
-          else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) extension = '.jpg';
-          else if (mimeType.includes('webp')) extension = '.webp';
-          else if (mimeType.includes('svg')) extension = '.svg';
-          else if (mimeType.includes('gif')) extension = '.gif';
-        }
-      } else {
-        fileBuffer = Buffer.from(fileData.split(',')[1] || fileData, 'base64');
-      }
-    } else {
-      fileBuffer = Buffer.from(fileData, 'base64');
-    }
-
-    // Clean and sanitize filename
     let cleanName = (fileName || 'file')
       .replace(/[^a-zA-Z0-9.-]/g, '_')
       .toLowerCase();
 
-    if (extension && !cleanName.endsWith(extension)) {
-      cleanName = `${cleanName}${extension}`;
-    }
-
+    // Return the optimized Data URL directly so the image/file is permanently stored
+    // in PostgreSQL (DataTypes.TEXT) and renders identically on all devices across the web.
     try {
+      const uploadsDir = path.resolve(__dirname, '../../public/uploads');
+      await fs.promises.mkdir(uploadsDir, { recursive: true });
+
+      let fileBuffer;
+      if (fileData.startsWith('data:')) {
+        fileBuffer = Buffer.from(fileData.split(',')[1] || fileData, 'base64');
+      } else {
+        fileBuffer = Buffer.from(fileData, 'base64');
+      }
+
       const uniqueFileName = `${Date.now()}-${cleanName}`;
       const destinationPath = path.join(uploadsDir, uniqueFileName);
       await fs.promises.writeFile(destinationPath, fileBuffer);
-      const publicUrl = `/uploads/${uniqueFileName}`;
-
-      return res.json({
-        success: true,
-        url: publicUrl,
-        fileName: cleanName,
-        size: fileBuffer.length,
-        message: 'File berhasil diunggah'
-      });
     } catch (fsErr) {
-      console.warn('Filesystem write not supported in serverless/read-only mode, using data-url:', fsErr.message);
-      return res.json({
-        success: true,
-        url: fileData,
-        fileName: cleanName,
-        size: fileBuffer.length,
-        message: 'File diproses sebagai Data URL'
-      });
+      // In serverless / read-only environment, dataUrl is the persistent format
     }
+
+    return res.json({
+      success: true,
+      url: fileData,
+      fileName: cleanName,
+      message: 'File berhasil diproses dan disinkronkan'
+    });
   } catch (err) {
     console.error('Error in /api/upload endpoint:', err);
     res.status(500).json({ error: 'Failed to upload file', details: err.message });

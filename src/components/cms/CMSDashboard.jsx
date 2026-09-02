@@ -21,7 +21,9 @@ import {
   ChevronRight,
   ShieldCheck,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  RefreshCw,
+  Database
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePortfolio } from '../../context/PortfolioContext';
@@ -53,6 +55,9 @@ export default function CMSDashboard({ onNavigateToPortfolio }) {
     projects,
     contactMessages = [],
     unreadMessagesCount = 0,
+    isDbConnected,
+    lastSyncedAt,
+    refreshData,
     resetToDefaults,
     exportData
   } = usePortfolio();
@@ -60,6 +65,7 @@ export default function CMSDashboard({ onNavigateToPortfolio }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [cmsToast, setCmsToast] = useState(null);
 
   const showToast = (message, type = 'success') => {
@@ -67,6 +73,13 @@ export default function CMSDashboard({ onNavigateToPortfolio }) {
     setTimeout(() => {
       setCmsToast(null);
     }, 4000);
+  };
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    await refreshData();
+    setIsSyncing(false);
+    showToast('Data berhasil disinkronkan langsung dengan database PostgreSQL!', 'success');
   };
 
   const navMenuItems = [
@@ -349,19 +362,47 @@ export default function CMSDashboard({ onNavigateToPortfolio }) {
           </div>
 
           {/* Header Action Tools */}
-          <div className="flex items-center gap-2.5">
-            
+          <div className="flex items-center gap-2 sm:gap-2.5">
+
+            {/* Database Live Status Indicator */}
+            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-mono font-semibold backdrop-blur-md ${
+              isDbConnected 
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                isDbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}></span>
+              <span className="hidden md:inline">
+                {isDbConnected ? 'PostgreSQL Supabase (Online)' : 'Database Syncing...'}
+              </span>
+              <span className="md:hidden">
+                {isDbConnected ? 'DB Online' : 'Offline'}
+              </span>
+            </div>
+
+            {/* Manual Sync / Refresh Button */}
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-slate-300 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+              title="Tarik & Sinkronkan Data Terbaru dari Database"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-brand-cyan ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sync DB</span>
+            </button>
+
             {/* Quick Export Data */}
             <button
               onClick={() => {
                 exportData();
                 showToast('Data portofolio berhasil diekspor ke JSON!', 'success');
               }}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-slate-300 hover:text-white transition-all"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-slate-300 hover:text-white transition-all"
               title="Ekspor Backup JSON"
             >
               <Download className="w-3.5 h-3.5 text-brand-violet" />
-              <span>Backup Data</span>
+              <span>Backup</span>
             </button>
 
             {/* Quick Reset Defaults */}
